@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+
+    <title>.catch - a not so promising talk on promises</title>
+
+    <link rel="stylesheet" href="css/reveal.min.css">
+    <link rel="stylesheet" href="css/theme/default.css" id="theme">
+
+    <!-- For syntax highlighting -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+  </head>
+
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section>
+          <h1>.catch()</h1>
+          <h3>A promises talk for ember.js</h3>
+          <p>
+            <small>Created by Steve McCarthy - Displayed by REVEAL.JS</small>
+          </p>
+        </section>
+
+        <section>
+          <h3>What is a promise?</h3>
+          <p class="fragment">A promise is the result of a task</p>
+        </section>
+
+        <section>
+          <h3>A promise can be ...</h3>
+          <ol>
+            <li class="fragment">Pending</li>
+            <li class="fragment">Settled</li>
+            <li class="fragment">Resolved</li>
+            <li class="fragment">Rejected</li>
+          </ol>
+        </section>
+
+        <section>
+          <section>
+            <h3>Why should you care?</h3>
+            <h1 class="fragment">Models!</h1>
+          </section>
+
+          <section>
+            <h3>Good</h3>
+            <pre><code data-trim contenteditable>
+App.IndexRoute = Ember.Route.extend({
+  model: function() {
+    return $.get("https://my-api.example.com/ember-model", function(data) {
+      // yes this "works"
+    });
+  }
+});
+            </code></pre>
+          </section>
+
+          <section>
+            <h3>Gooder</h3>
+            <pre><code data-trim contenteditable>
+App.IndexRoute = Ember.Route.extend({
+  model: function() {
+    return $.get("https://my-api.example.com/ember-model");
+  }
+});
+            </code></pre>
+          </section>
+
+          <section>
+            <h3>Gooderer</h3>
+            <pre><code data-trim contenteditable>
+App.IndexRoute = Ember.Route.extend({
+  model: function() {
+    return new RSVP.Promise(function(resolve, reject) {
+      $.get("https://my-api.example.com/ember-model")
+      .then(function(data) {
+        resolve(data);
+      })
+      .fail(function(error) {
+        reject(error);
+      });
+    });
+  }
+});
+            </code></pre>
+          </section>
+
+          <section>
+            <h3>Goodererest</h3>
+            <pre><code data-trim contenteditable>
+App.IndexRoute = Ember.Route.extend({
+  model: function() {
+    return new RSVP.Promise(function(resolve, reject) {
+      $.get("https://my-api.example.com/ember-model")
+      .then(resolve).fail(reject);
+    });
+  }
+});
+            </code></pre>
+          </section>
+        </section>
+
+        <section>
+          <section>
+            <h3>So what if you want to get two things?</h3>
+          </section>
+
+          <section>
+            <h3>jQuery it</h3>
+            <pre><code data-trim contenteditable>
+App.IndexRoute = Ember.Route.extend({
+  model: function() {
+    return $.get("https://my-api.example.com/ember-model")
+    .then(function(data) {
+      return $.get("https://my-api.example.com/ember-model2")
+      .then(function(data2) {
+        return {data: data, data2: data2};
+      });
+    });
+  }
+});
+            </code></pre>
+            <p><small>Honestly not even sure if this works</small></p>
+          </section>
+
+          <section>
+            <h1>Promise.all!!!</h1>
+          </section>
+
+          <section>
+            <h3>Promise.all</h3>
+            <pre><code data-trim contenteditable>
+App.IndexRoute = Ember.Route.extend({
+  model: function() {
+    var model1 = new RSVP.Promise(function(resolve, reject) {
+      return $.get("https://my-api.example.com/ember-model").then(resolve).fail(reject);
+    });
+    var model2 = new RSVP.Promise(function(resolve, reject) {
+      return $.get("https://my-api.example.com/ember-model2").then(resolve).fail(reject);
+    });
+
+    return RSVP.Promise.all([model1, model2]); // it combines them!
+  }
+});
+            </code></pre>
+            <p><small>Yes, it probably works</small></p>
+          </section>
+        </section>
+
+        <section>
+          <section>
+            <h3>So what if something goes wrong?</h3>
+            <p class="fragment">Handle it with .catch()!</p>
+          </section>
+
+          <section>
+            <h3>.catch()</h3>
+            <pre><code data-trim contenteditable>
+App.IndexRoute = Ember.Route.extend({
+  model: function() {
+    return new RSVP.Promise(function(resolve, reject) {
+      $.get("https://my-api.example.com/ember-model")
+      .then(resolve).fail(reject);
+    }).catch(function(error) {
+      // the defaults
+      return [
+        "model 1",
+        "model 2"
+      ];
+    });
+  }
+});
+            </code></pre>
+          </section>
+
+          <section>
+            <h3>Even better</h3>
+            <p>Yes, you CAN .catch() a Promise.all()</p>
+          </section>
+
+          <section>
+            <h3>Promise.all .catch</h3>
+            <pre><code data-trim contenteditable>
+App.IndexRoute = Ember.Route.extend({
+  model: function() {
+    var model1 = new RSVP.Promise(function(resolve, reject) {
+      return $.get("https://my-api.example.com/ember-model").then(resolve).fail(reject);
+    });
+    var model2 = new RSVP.Promise(function(resolve, reject) {
+      return $.get("https://my-api.example.com/ember-model2").then(resolve).fail(reject);
+    });
+
+    return RSVP.Promise.all([model1, model2])
+    .catch(function(error) {
+      console.warn(error); // I live on the edge
+      return {model1: "I still got", model2: "your back"};
+    });
+  }
+});
+            </code></pre>
+            <p><small>Again, it probably works ... maybe</small></p>
+          </section>
+        </section>
+
+        <section>
+          <h3>Questions?</h3>
+        </section>
+
+        <section>
+          <h2>.finally()</h2>
+          <p>
+            Thanks for listening
+          </p>
+        </section>
+
+      </div>
+    </div>
+
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.min.js"></script>
+
+    <script>
+
+      // Full list of configuration options available here:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+
+        theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+        transition: Reveal.getQueryHash().transition || 'none', // default/cube/page/concave/zoom/linear/fade/none
+
+        // Parallax scrolling
+        // parallaxBackgroundImage: 'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg',
+        // parallaxBackgroundSize: '2100px 900px',
+
+        // Optional libraries used to extend on reveal.js
+        dependencies: [
+          { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+          { src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+          { src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+        ]
+      });
+
+    </script>
+
+  </body>
+</html>
